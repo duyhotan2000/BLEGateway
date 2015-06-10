@@ -1,0 +1,70 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+    <title>Config sensor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <script src="javascript/jquery.min.js"></script>
+    <script src="javascript/bootstrap.min.js"></script>
+    <script src="javascript/angular.min.js"></script>
+    <style>
+        body{
+            background-image: url("image/bg11.jpg");
+            background-repeat: no-repeat;
+            background-size:100% 100%;
+        }
+        .footer {
+            background-color: #f5f5f5;
+            height: 60px;
+            position: absolute;
+            width: 100%;
+        }
+
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <img src="image/Configuration-Settings-icon.png"
+                 class="img-circle" alt="Cinque Terre" width="50px" height="50px" style="margin-right: 50px;">
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="/">Home</a></li>
+                <li><a href="index.html">Configuration</a></li>
+                <li><a href="about.html">About</a></li>
+                <li class="active"><a href="contact.html">Contact</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div>
+</nav>
+<div class="container" ng-controller="StartScanCtrl" style="margin-top: 100px">
+    <div class="tab-content">
+        <div id="sensorconfig" class="tab-pane fade in active">
+
+            <h3> Contact </h3>
+            <p style="margin-top: 50px;"> Ong Cam Xuong - Email: ongcamxuong@gmail.com </p>
+            </br>
+            <p style="margin-bottom: 315px;"> Ho Tan Duy - Email: duy_hotan2000@yahoo.com </p>
+
+        </div>
+    </div>
+
+</div>
+<footer class="footer">
+    <div class="container">
+        <p class="text-muted" style="margin-top: 23px">Website Config Version 0.23</p>
+    </div>
+</footer>
+
+</body>
+</html>

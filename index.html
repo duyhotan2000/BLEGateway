@@ -1,0 +1,923 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+<head>
+    <title>Config sensor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <script src="javascript/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="javascript/angular.min.js"></script>
+
+    <style>
+        body{
+            /*background-image: url("image/bg11.jpg");
+            background-repeat: no-repeat;
+            background-size:100% 100%;*/
+        }
+        ul {
+            white-space: nowrap;
+        }
+
+        li {
+
+        }
+        .footer {
+             background-color: #f5f5f5;
+             height: 60px;
+             position: absolute;
+             width: 100%;
+         }
+
+    </style>
+    <script>
+        var tenpangu = angular.module('test', []);
+
+        tenpangu.controller('StartScanCtrl', function ($scope, $http, helper) {
+
+            $scope.selectedSensor = {};
+            $scope.Sensors = [];
+            $scope.sensor = [];
+            $scope.loadingImg = false;
+            $scope.serviceLoading = false;
+            $scope.loading = {};
+            $scope.loadinggetdata = {};
+            $scope.disableScanningButton = false;
+            $scope.disableSelectDevices = true;
+            $scope.showSaveConfigButton = false
+            $scope.showConnectButton = true;
+            $scope.showDisconnectButton = false;
+            $scope.disableConnectButton = true;
+            $scope.hexPattern = /^[0-9A-Fa-f]+$/;
+            $scope.urlfirebase = "";
+            $scope.usernamefirebase = "";
+            $scope.passwordfirebase = "";
+            $scope.tokenfirebase = "";
+            $scope.currentpassword = "";
+            $scope.newpassword = "";
+            $scope.repassword = "";
+            $scope.selectedEditandDeleteSensor = [];
+            $scope.selectedPeripheral = "";
+            $scope.editperipheral = [];
+            $scope.enableButton = false;
+
+            angular.element(document).ready(function () {
+                $scope.getinfofirebase();
+            });
+
+            $scope.enableScan = function () {
+                //$scope.disableScanningButton = true;
+
+
+                //TODO: change is here
+                $scope.loadingImg = true;
+                $scope.disableSelectDevices = true;
+                $scope.disableConnectButton = true;
+                $scope.showConnectButton = true;
+                $scope.showDisconnectButton = false;
+
+
+                $http.get('/api/peripheral', {timeout: 20000}).then(function (response) {
+                    $scope.Sensors = response.data;
+                    $scope.loadingImg = false;
+                    console.log($scope.Sensors);
+                    if($scope.Sensors.length === 0){ // there is no data
+                        $scope.disableScanningButton = false;
+                        $scope.disableConnectButton = true;
+                        alert("Can not find. please re-Scan (Press Start Scan button)");
+                    }
+                    else if($scope.Sensors.length > 0) { // there are data
+                        $scope.disableScanningButton = false;
+                        $scope.disableSelectDevices = false;
+                        $scope.disableConnectButton = false;
+                    }
+                }).error(function(data, status){
+                    alert(data.message);
+                });;
+            }
+
+            $scope.sendSensor = function () {
+                $scope.disableSelectDevices = true;
+                $scope.serviceLoading = true;
+                if($scope.selectedSensor === "Select Sensor"){
+                    alert("please choose correct sensor. Thanks.");
+                }
+
+                else {
+                    $http.post('/api/services', JSON.stringify({"peripheral": "" + $scope.selectedSensor.uuid})).success(function (data, status, headers, config) {
+
+                        $scope.sensor = data;
+                        $scope.serviceLoading = false;
+                        console.log();
+                        $scope.showSaveConfigButton = true;
+                        $scope.showConnectButton = false;
+                        $scope.showDisconnectButton = true;
+                        $scope.disableConnectButton = false;
+
+                    }).error(function(data, status){
+                        alert(data.message);
+                    });;
+                }
+
+            }
+
+            $scope.sendSensorAndGetAllAttribute = function () {
+                $scope.disableSelectDevices = true;
+                $scope.serviceLoading = true;
+                if($scope.selectedSensor === "Select Sensor"){
+                    alert("please choose correct sensor. Thanks.");
+                }
+
+                else {
+                    $http.post('/api/allInfo', JSON.stringify({"peripheral": "" + $scope.selectedSensor.uuid})).success(function (data, status, headers, config) {
+
+                        $scope.sensor = data;
+                        $scope.serviceLoading = false;
+                        console.log();
+                        $scope.showSaveConfigButton = true;
+                        $scope.showConnectButton = false;
+                        $scope.showDisconnectButton = true;
+                        $scope.disableConnectButton = false;
+
+                    }).error(function(data, status){
+                        alert(data.message)
+                    });
+                }
+
+            }
+
+            $scope.disconnectSensor = function () {
+                $scope.disableSelectDevices = true;
+                $http.post('/api/disconnect', JSON.stringify({"peripheral": "" + $scope.selectedSensor.uuid}, {timeout: 20000})).success(function (data, status, headers, config) {
+
+                    console.log("OK");
+                    $scope.showConnectButton = true;
+                    $scope.showDisconnectButton = false;
+                    $scope.showDisconnectButton = false;
+                    $scope.disableConnectButton = true;
+                    $scope.disableScanningButton = false;
+                    location.reload();
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });;
+            }
+
+            $scope.getCharacteristics = function (serviceUuid) {
+                $scope.loading[serviceUuid] = true;
+                var postData = JSON.stringify(
+                        {
+                            "peripheral": $scope.selectedSensor.uuid,
+                            "service": serviceUuid
+                        });
+
+                $http.post('/api/characteristics', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    var pos = 0;
+                    for (i = 0; i < $scope.sensor.length; i++) {
+                        if ($scope.sensor[i].uuid === serviceUuid) {
+                            $scope.sensor[i].characteristics = data;
+                            $scope.loading[serviceUuid] = false;
+                            break;
+                        }
+                    }
+                    //service.characteristics = data;
+                    console.log();
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });;
+            }
+
+            $scope.getDescriptors = function (serviceUuid, characteristicUuid) {
+                $scope.loading[characteristicUuid] = true;
+                var postData = JSON.stringify(
+                        {
+                            "peripheral": $scope.selectedSensor.uuid,
+                            "service": serviceUuid,
+                            "characteristic": characteristicUuid
+                        });
+
+                $http.post('/api/descriptors', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    var pos = 0;
+                    for (i = 0; i < $scope.sensor.length; i++) {
+                        if ($scope.sensor[i].uuid === serviceUuid) {
+                            for (j = 0; j < $scope.sensor[i].characteristics.length; j++) {
+                                if ($scope.sensor[i].characteristics[j].uuid === characteristicUuid) {
+                                    $scope.sensor[i].characteristics[j].descriptors = data;
+                                    $scope.loading[characteristicUuid] = false;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    //service.characteristics = data;
+                    console.log();
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });;
+            }
+
+            $scope.getCharacteristicData = function (serviceUuid, characteristicUuid) {
+                $scope.loadinggetdata[characteristicUuid] = true;
+                var postData = JSON.stringify(
+                        {
+                            "peripheral": $scope.selectedSensor.uuid,
+                            "service": serviceUuid,
+                            "characteristic": characteristicUuid
+                        });
+
+                $http.post('/api/data/characteristic', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    var pos = 0;
+                    for (i = 0; i < $scope.sensor.length; i++) {
+                        if ($scope.sensor[i].uuid === serviceUuid) {
+                            for (j = 0; j < $scope.sensor[i].characteristics.length; j++) {
+                                if ($scope.sensor[i].characteristics[j].uuid === characteristicUuid) {
+                                    $scope.sensor[i].characteristics[j].data = data;
+                                    $scope.loadinggetdata[characteristicUuid] = false;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    //service.characteristics = data;
+                    console.log();
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });;
+            }
+
+            $scope.getDescriptorData = function (serviceUuid, characteristicUuid, descriptorUuid) {
+                var postData = JSON.stringify(
+                        {
+                            "peripheral": $scope.selectedSensor.uuid,
+                            "service": serviceUuid,
+                            "characteristic": characteristicUuid,
+                            "descriptor": descriptorUuid
+                        });
+
+                $http.post('/api/data/descriptor', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    var pos = 0;
+                    for (i = 0; i < $scope.sensor.length; i++) {
+                        if ($scope.sensor[i].uuid === serviceUuid) {
+                            for (j = 0; j < $scope.sensor[i].characteristics.length; j++) {
+                                if ($scope.sensor[i].characteristics[j].uuid === characteristicUuid) {
+                                    for (k = 0; k < $scope.sensor[i].characteristics[j].descriptors.length; k++) {
+                                        if ($scope.sensor[i].characteristics[j].descriptors[k].uuid === descriptorUuid) {
+                                            $scope.sensor[i].characteristics[j].descriptors[k].data = data;
+                                            break;
+                                        }
+
+                                    }
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    //service.characteristics = data;
+                    console.log();
+                }).error(function(data, status){
+                    alert(data.message);
+                });;
+            }
+
+            $scope.isShow = function (type, properties) {
+                for (i = 0; i < properties.length; i++) {
+                    if (properties[i] === type) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            $scope.onPropertyChange = function (type, bool, serviceUuid, characteristicUuid) {
+                console.log(type);
+                console.log(bool);
+                console.log(serviceUuid);
+                console.log(characteristicUuid);
+                for (i = 0; i < $scope.sensor.length; i++) {
+                    if ($scope.sensor[i].uuid === serviceUuid) {
+                        for (j = 0; j < $scope.sensor[i].characteristics.length; j++) {
+                            if ($scope.sensor[i].characteristics[j].uuid === characteristicUuid) {
+                                $scope.sensor[i].characteristics[j][type] = bool;
+                                console.log("b");
+                            }
+                        }
+                    }
+
+                }
+            }
+
+            $scope.onPropertyChangeEditandDelete = function (type, bool, serviceUuid, characteristicUuid) {
+                console.log(type);
+                console.log(bool);
+                console.log(serviceUuid);
+                console.log(characteristicUuid);
+                for (i = 0; i < $scope.editperipheral.length; i++) {
+                    if ($scope.editperipheral[i].uuid === serviceUuid) {
+                        for (j = 0; j < $scope.editperipheral[i].characteristics.length; j++) {
+                            if ($scope.editperipheral[i].characteristics[j].uuid === characteristicUuid) {
+                                $scope.editperipheral[i].characteristics[j][type] = bool;
+                                console.log("b");
+                            }
+                        }
+                    }
+
+                }
+            }
+
+            $scope.testWrite = function () {
+                var postData = {
+                    peripheral : $scope.selectedSensor.uuid,
+                    data : $scope.sensor
+                }
+
+                $http.post('/api/save/peripheral', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    alert("Submit successfully");
+                    location.reload();
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });
+            }
+
+
+            $scope.EditWriteConfig = function () {
+                var postData = {
+                    peripheral : $scope.selectedPeripheral,
+                    data : $scope.editperipheral
+                }
+
+                $http.post('/api/save/peripheral', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    if (status === 200) {
+                        alert("Submit successfully");
+                        $scope.editperipheral = [];
+                        $scope.enableButton = false;
+
+                    }
+                }).error(function (data, status) {
+
+                    alert(status);
+                    console.log(data || "Request failed");
+                    alert(data || "Request failed");
+
+
+                });
+            }
+
+            $scope.posttokenfirebasedata = function () {
+                var postData = {};
+
+                postData = {
+                    url : $scope.urlfirebase,
+                    token : $scope.tokenfirebase
+                }
+
+                $http.post('/api/save/firebase', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    alert("Submit successfully");
+                    location.reload();
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });
+            }
+
+            $scope.postchangepassword = function () {
+
+                var postData = {};
+
+                postData = {
+                    oldpassword : $scope.currentpassword,
+                    newpassword : $scope.newpassword,
+                    confirmpassword : $scope.repassword
+                }
+
+                $http.post('/api/gateway/admin', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    $scope.currentpassword = "";
+                    $scope.newpassword = "";
+                    $scope.repassword = "";
+                    alert(data);
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });
+
+            }
+
+            $scope.postuserpassfirebasedata = function () {
+
+                var postData = {};
+
+                postData = {
+                    url : $scope.urlfirebase,
+                    username : $scope.usernamefirebase,
+                    password : $scope.passwordfirebase
+                }
+
+                $http.post('/api/save/firebase', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    alert("Submit successfully");
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });
+
+            }
+
+
+            $scope.posturlfirebasedata = function () {
+
+                var postData = {};
+
+                postData = {
+                    url : $scope.urlfirebase
+                }
+
+                $http.post('/api/save/firebase', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    alert("Submit successfully");
+                    location.reload();
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });
+
+            }
+
+
+            $scope.getinfofirebase = function () {
+                $http.get('/api/firebase', {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    if(Object.keys(data)){
+                       $scope.urlfirebase = data.url;
+                       $scope.usernamefirebase = data.username;
+                       $scope.passwordfirebase = data.password;
+                       $scope.tokenfirebase = data.token;
+                    }
+                    //service.characteristics = data;
+                    console.log(data);
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });;
+            }
+
+            $scope.initload = function(){
+                $http.get('/api/gateway/peripheralConfigList', {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    if(Object.keys(data)){
+
+                        $scope.selectedEditandDeleteSensor = data;
+                    }
+                    //service.characteristics = data;
+                    console.log(data);
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });;
+            }
+
+
+            $scope.editSensorConfig = function () {
+
+                if($scope.selectedPeripheral == "" || $scope.selectedPeripheral === null || $scope.selectedPeripheral === undefined){
+                    return alert("Please select your sensor. Thanks.");
+                }
+
+                var postData = {};
+
+                postData = {
+                    uuid : $scope.selectedPeripheral
+                }
+
+                $http.post('/api/gateway/peripheralConfig', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+                    $scope.editperipheral = data;
+                    //service.characteristics = data;
+                    $scope.enableButton = true;
+                    console.log(data);
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });;
+            }
+
+            $scope.deleteSensorConfig = function () {
+
+                if($scope.selectedPeripheral == "" || $scope.selectedPeripheral === null || $scope.selectedPeripheral === undefined){
+                    return alert("Please select your sensor. Thanks.");
+                }
+
+                var postData = {};
+
+                postData = {
+                    uuid : $scope.selectedPeripheral
+                }
+
+                $http.post('/api/gateway/deletePeripheralConfig', postData, {timeout: 20000}).success(function (data, status, headers, config) {
+
+
+                    console.log(data);
+                    alert(data);
+
+                    $scope.selectedPeripheral = [];
+                    $scope.editperipheral = [];
+                    $scope.enableButton = false;
+                    $scope.initload();
+
+
+                }).error(function(data, status){
+                    alert(data.message);
+                });
+            }
+
+
+        });
+
+
+        tenpangu.service('helper', function ($http) {
+            return {
+                loadData: function (url) {
+                    return $http.get(url);
+                }
+            }
+        });
+
+    </script>
+</head>
+<body ng-app="test">
+<nav class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <img src="image/Configuration-Settings-icon.png"
+                 class="img-circle" alt="Cinque Terre" width="50px" height="50px" style="margin-right: 50px;">
+        </div>
+        <div id="navbar" class="collapse navbar-collapse">
+            <ul class="nav navbar-nav">
+                <li><a href="/">Home</a></li>
+                <li class="active"><a href="index.html">Configuration</a></li>
+                <li><a href="about.html">About</a></li>
+                <li><a href="contact.html">Contact</a></li>
+            </ul>
+        </div><!--/.nav-collapse -->
+    </div>
+</nav>
+<div class="container" ng-controller="StartScanCtrl" style="margin-top: 100px">
+    <ul class="nav nav-tabs">
+        <li class="active"><a data-toggle="tab" href="#sensorconfig" style="color:black;">Sensor Config</a></li>
+        <li><a data-toggle="tab" href="#editandchangesensorconfig" style="color:black;"  ng-click="initload()">Edit and Delete Sensor Config</a></li>
+        <li><a data-toggle="tab" href="#firebaseconfig" style="color:black;">Firebase Config</a></li>
+        <li><a data-toggle="tab" href="#changepass" style="color:black;">Change Password</a></li>
+    </ul>
+
+    <div class="tab-content">
+        <div id="sensorconfig" class="tab-pane fade in active">
+
+
+
+            <!--config sensors-->
+            <div class="row" style="margin-bottom: 85px;">
+                <div class="col-sm-4">
+                    <h3>Sensors</h3>
+
+                    <p>Sensor you want to config.</p>
+
+                    <p>Select one you would config and it will generate json file</p>
+
+                    <div class="form-group">
+
+                        <button id="btnScan" type="button" class="btn btn-default"
+                                style="width:80%; background-color: greenyellow;" ng-click="enableScan()" ng-disabled="disableScanningButton">Start Scan
+                        </button>
+                        <span class="text-nowrap" ng-show="loadingImg">
+                            <img src="image/ajax-loader_izv4im.gif"/>
+                        </span>
+
+                        <label for="sel2">Please choose a device to connect</label>
+
+                        <select class="form-control input-lg" id="sel2" ng-model="selectedSensor"
+                                ng-options="item.uuid for item in Sensors track by item.uuid" ng-disabled="disableSelectDevices">
+                            <option value="">Select Option</option>
+                        </select>
+
+                        </br>
+                        <input class="form-control input-lg" id="inputlg" type="text" value={{selectedSensor.name}} readonly>
+                        </br>
+                        <button type="button" class="btn btn-default" style="width:100%" ng-click="sendSensor()" ng-show="showConnectButton" ng-disabled="disableConnectButton">Connect
+                        </button>
+
+                        <button type="button" class="btn btn-default" style="width:100%" ng-click="sendSensorAndGetAllAttribute()" ng-show="showConnectButton" ng-disabled="disableConnectButton">Connect & Get All Attribute
+                        </button>
+
+                        <button type="button" class="btn btn-default" style="width:100%" ng-click="disconnectSensor()" ng-show="showDisconnectButton">Disconnect
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-sm-8" >
+                    <span class="text-nowrap" ng-show="serviceLoading">
+                            <img src="image/ajax-loader_1_czac6h.gif"/>
+                        </span>
+
+                    <div class="well sidebar-nav" ng-show="!serviceLoading" style="overflow: scroll; margin-top: 30px; height: 400px;">
+                        <ul style="">
+                            <li ng-repeat=" service in sensor">
+                                <a href="javascript:void(0)" ng-click="getCharacteristics(service.uuid)">{{ service.name ||
+                                    "Unknown Service"}}</a>
+                                <img src="image/ajax-loader_izv4im.gif"
+                                     ng-show="loading[service.uuid]"/>
+                                <ul>
+                                    <li>UUID: {{ service.uuid }}</li>
+                                    <li>Type: {{ service.type || "Unknown Type"}}</li>
+                                    <li>Included service UUID: {{ service.includedServiceUuids || "No service"}}</li>
+                                </ul>
+                                <ul>
+                                    <li ng-repeat="characteristic in service.characteristics">
+                                        <a href="javascript:void(0)" ng-click="
+                                        getDescriptors(service.uuid,characteristic.uuid)">{{
+                                            characteristic.name || "Unknown Characteristic"}}</a>
+                                        <img src="image/ajax-loader_izv4im.gif"
+                                             ng-show="loading[characteristic.uuid]"/>
+                                        <span ng-show="isShow('read',characteristic.properties)"><input type="checkbox"
+                                                                                                        ng-model="boolRead"
+                                                                                                        ng-change="onPropertyChange('read',boolRead,service.uuid,characteristic.uuid)">Read</span>
+                                        <span ng-show="isShow('notify',characteristic.properties)">
+                                            <input type="checkbox" ng-model="boolNotify"
+                                                   ng-change="onPropertyChange('notify',boolNotify,service.uuid,characteristic.uuid)">Notify
+                                        </span>
+
+                                        <span ng-show="isShow('write',characteristic.properties)">
+                                            <form name="myForm">
+                                                Write some data <input type="text" ng-model="characteristic.write" name="salt" ng-pattern="hexPattern">
+                                                <span class="error" ng-show="myForm.salt.$invalid" style="color:#FF0000">Not valid. Please enter correct hex number.</span>
+                                            </form>
+                                        </span>
+
+
+                                        <ul>
+                                            <li>
+                                                UUID: {{ characteristic.uuid }}
+                                            </li>
+                                            <li>
+                                                Type: {{ characteristic.type || "Unknown Type"}}
+                                            </li>
+                                            <li>
+                                                Data: {{ characteristic.data || "No data"}}
+                                                <br/>
+                                                <a href="javascript:void(0)" ng-click="
+                                        getCharacteristicData(service.uuid,characteristic.uuid)">Click to get data</a>
+                                                <img src="image/ajax-loader_izv4im.gif"
+                                                     ng-show="loadinggetdata[characteristic.uuid]"/>
+                                            </li>
+                                        </ul>
+                                        <ul>
+                                            <li ng-repeat="descriptor in characteristic.descriptors">
+                                                {{ descriptor.name || "Unknown Descriptor"}}
+                                                <ul>
+                                                    <li>
+                                                        UUID: {{ descriptor.uuid }}
+                                                    </li>
+                                                    <li>
+                                                        Type: {{ descriptor.type || "Unknown Type"}}
+                                                    </li>
+                                                    <li>
+                                                        Data: {{ descriptor.data || "No data"}}
+                                                        <a href="javascript:void(0)"
+                                                           ng-click="getDescriptorData(service.uuid,characteristic.uuid,descriptor.uuid)">
+                                                            <br/> Click to get data</a>
+                                                    </li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                        <button style="float:right;" ng-click="testWrite()" ng-show="showSaveConfigButton" class="btn btn-default">Save Config</button>
+                    </div>
+                    <!--/.well -->
+                </div>
+                <!--/span-->
+            </div>
+        </div>
+
+
+        <!-- edit and change sensor config-->
+        <div id="editandchangesensorconfig" class="tab-pane fade" >
+
+
+
+            <!--config sensors-->
+            <div class="row" style="margin-bottom: 85px;">
+                <div class="col-sm-4">
+                    <h3>Sensors</h3>
+
+                    <p>Sensor you want to config.</p>
+
+                    <p>Select one you would config and it will generate json file</p>
+
+                    <div class="form-group">
+
+                        <label for="sel2">Please choose a device to connect</label>
+
+                        <select class="form-control input-lg" id="sel21" ng-model="selectedPeripheral"
+                                ng-options="item for item in selectedEditandDeleteSensor">
+                            <option value="">Select Option</option>
+                        </select>
+
+                        </br>
+
+                        <button style="background-color: greenyellow; width: 45%;" type="button" class="btn btn-default" ng-click="editSensorConfig()">Edit
+                        </button>
+
+                        <button style="background-color: greenyellow; float:right; width: 45%;" type="button" class="btn btn-default" ng-click="deleteSensorConfig()">Delete
+                        </button>
+                    </div>
+                </div>
+
+                <div class="col-sm-8" >
+
+                    <div class="well sidebar-nav" ng-show="!serviceLoading" style="overflow: scroll; margin-top: 30px; height: 400px;">
+                        <ul style="">
+                            <li ng-repeat=" service in editperipheral">
+                                {{ service.name || "Unknown Service"}}
+                                <img src="image/ajax-loader_izv4im.gif"
+                                     ng-show="loading[service.uuid]"/>
+                                <ul>
+                                    <li>UUID: {{ service.uuid }}</li>
+                                    <li>Type: {{ service.type || "Unknown Type"}}</li>
+                                    <li>Included service UUID: {{ service.includedServiceUuids || "No service"}}</li>
+                                </ul>
+                                <ul>
+                                    <li ng-repeat="characteristic in service.characteristics">
+                                        {{ characteristic.name || "Unknown Characteristic"}}
+                                        <img src="image/ajax-loader_izv4im.gif"
+                                             ng-show="loading[characteristic.uuid]"/>
+                                        <span ng-show="isShow('read',characteristic.properties)"><input type="checkbox"
+                                                                                                        ng-model="boolRead"
+                                                                                                        ng-change="onPropertyChangeEditandDelete('read',boolRead,service.uuid,characteristic.uuid)"
+                                                                                                        ng-checked="characteristic.read">Read</span>
+                                        <span ng-show="isShow('notify',characteristic.properties)">
+                                            <input type="checkbox" ng-model="boolNotify"
+                                                   ng-change="onPropertyChangeEditandDelete('notify',boolNotify,service.uuid,characteristic.uuid)"
+                                                   ng-checked="characteristic.notify" >Notify
+                                        </span>
+
+                                        <span ng-show="isShow('write',characteristic.properties)">
+                                            <form name="myForm">
+                                                Write some data <input type="text" ng-model="characteristic.write" name="salt" ng-pattern="hexPattern">
+                                                <span class="error" ng-show="myForm.salt.$invalid" style="color:#FF0000">Not valid. Please enter correct hex number.</span>
+                                            </form>
+                                        </span>
+
+
+                                        <ul>
+                                            <li>
+                                                UUID: {{ characteristic.uuid }}
+                                            </li>
+                                            <li>
+                                                Type: {{ characteristic.type || "Unknown Type"}}
+                                            </li>
+                                            <li>
+                                                Data: {{ characteristic.data || "No data"}}
+                                                <br/>
+                                                <img src="image/ajax-loader_izv4im.gif"
+                                                     ng-show="loadinggetdata[characteristic.uuid]"/>
+                                            </li>
+                                        </ul>
+                                        <ul>
+                                            <li ng-repeat="descriptor in characteristic.descriptors">
+                                                {{ descriptor.name || "Unknown Descriptor"}}
+                                                <ul>
+                                                    <li>
+                                                        UUID: {{ descriptor.uuid }}
+                                                    </li>
+                                                    <li>
+                                                        Type: {{ descriptor.type || "Unknown Type"}}
+                                                    </li>
+                                                    <li>
+                                                        Data: {{ descriptor.data || "No data"}}
+
+                                                    </li>
+                                                </ul>
+                                            </li>
+                                        </ul>
+                                    </li>
+                                </ul>
+                            </li>
+                        </ul>
+                        <button style="float:right;" ng-click="EditWriteConfig()" ng-show="enableButton" class="btn btn-default">Save Config</button>
+                    </div>
+                    <!--/.well -->
+                </div>
+                <!--/span-->
+            </div>
+        </div>
+
+        <!--config firebase-->
+        <div id="firebaseconfig" class="tab-pane fade">
+            <div class="row" style="margin-top: 30px;">
+                <div class="col-sm-4">
+                    <div class="container">
+                        <ul class="nav nav-pills nav-stacked col-sm-4">
+                            <li class="active"><a data-toggle="tab" href="#token" style="color:black;">Token ( Firebase )</a></li>
+                            <li><a data-toggle="tab" href="#userpass" style="color:black;">Username & Password ( Firebase )</a></li>
+                            <li><a data-toggle="tab" href="#noauthentication" style="color:black;">No Authentication ( Firebase )</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-sm-8">
+                    <div class="tab-content">
+                        <div id="token" class="tab-pane fade in active">
+                            <form name="myFormTokenFirebase" ng-submit="posttokenfirebasedata()">
+                                <b style="font-size: 17px;"> URL Firebase: </b>
+                                <input class="form-control input-lg" type="url" required="true" ng-model="urlfirebase" placeholder="Enter URL">
+                                <h2 style="color: darkblue;">Using Token To Config Firebase</h2>
+                                </br>
+                                </br>
+                                <b style="font-size: 17px;"> Token Firebase: </b>
+                                <input class="form-control input-lg" type="text" required="true" ng-model="tokenfirebase" placeholder="Enter Token">
+                                </br></br>
+                                <input type="submit" ng-show="true" class="btn btn-default" style="background-color: greenyellow; margin-bottom: 155px;" value="Save Config Firebase">
+                            </form>
+                        </div>
+                        <div id="userpass" class="tab-pane fade">
+                            <form name="myFormUserPassFirebase" ng-submit="postuserpassfirebasedata()">
+                                <b style="font-size: 17px;"> URL Firebase: </b>
+                                <input class="form-control input-lg" type="url" required="true" ng-model="urlfirebase" placeholder="Enter URL">
+                                <h2 style="color: darkblue;">Using Username And Password To Config Firebase</h2>
+                                </br>
+                                </br>
+                                <b style="font-size: 17px;"> Email Firebase: </b>
+                                <input class="form-control input-lg" type="email" required="true" ng-model="usernamefirebase" placeholder="Enter Email">
+                                </br>
+                                <b style="font-size: 17px;"> Password Firebase: </b>
+                                <input class="form-control input-lg" type="password" required="true" ng-model="passwordfirebase" placeholder="Enter Password">
+                                </br></br>
+                                <input type="submit" ng-show="true" class="btn btn-default" style="background-color: greenyellow; margin-bottom: 60px;" value="Save Config Firebase">
+                            </form>
+                        </div>
+                        <div id="noauthentication" class="tab-pane fade">
+                            <form name="myFormUserPassFirebase" ng-submit="posturlfirebasedata()">
+                                <b style="font-size: 17px;"> URL Firebase: </b>
+                                <input class="form-control input-lg" type="url" required="true" ng-model="urlfirebase" placeholder="Enter URL">
+                                </br></br>
+                                <input type="submit" ng-show="true" class="btn btn-default" style="background-color: greenyellow; margin-bottom: 60px;" value="Save Config Firebase">
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!--config change pass-->
+        <div id="changepass" class="tab-pane fade">
+            <div class="col-sm-12">
+                <div class="row" style="margin-top: 30px;">
+                    <form name="myChangePassForm" ng-submit="postchangepassword()">
+                        <h2 style="color: darkblue;">Change Password</h2>
+                        <b style="font-size: 17px;"> Current Password : </b>
+                        <input class="form-control input-lg" type="password" required="true" ng-model="currentpassword" placeholder="Enter Current Password">
+                        </br>
+                        <b style="font-size: 17px;"> New Password: </b>
+                        <input class="form-control input-lg" type="password" required="true" ng-model="newpassword" placeholder="Enter New Password">
+                        </br>
+                        <b style="font-size: 17px;"> Re-Password: </b>
+                        <input class="form-control input-lg" type="password" required="true" ng-model="repassword" placeholder="Re-Enter Password">
+                        </br></br>
+                        <input type="submit" ng-show="true" class="btn btn-default" style="background-color: greenyellow; margin-bottom: 155px;" value="Change Password">
+
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div>
+<footer class="footer">
+    <div class="container">
+        <p class="text-muted" style="margin-top: 23px">Website Config Version 0.23</p>
+    </div>
+</footer>
+
+</body>
+</html>

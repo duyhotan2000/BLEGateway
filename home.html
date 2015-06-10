@@ -1,0 +1,216 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+        "http://www.w3.org/TR/html4/loose.dtd">
+<html lang="en">
+<head>
+    <title>Config sensor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="css/bootstrap.min.css">
+    <script src="javascript/jquery.min.js"></script>
+    <script src="javascript/bootstrap.min.js"></script>
+    <script src="javascript/angular.min.js"></script>
+
+    <style>
+        body {
+            /*background-image: url("image/bg11.jpg");
+            background-repeat: no-repeat;
+            background-size: 100% 100%;*/
+        }
+
+        ul {
+            white-space: nowrap;
+        }
+
+        li {
+
+        }
+
+        .footer {
+            background-color: #f5f5f5;
+            height: 60px;
+            position: absolute;
+            width: 100%;
+        }
+
+    </style>
+    <script>
+        var tenpangu = angular.module('test', []);
+
+        tenpangu.controller('StartScanCtrl', function ($scope, $http,$window) {
+            $scope.status = "";
+            $scope.peripherals = [];
+            $scope.uptime = 0;
+
+            angular.element(document).ready(function () {
+                getStatus();
+                setInterval(getStatus,3000);
+            });
+
+            var getStatus = function(){
+                $http.get('/api/gateway/getStatus', {timeout: 2000}).success(function (data, status, headers, config) {
+                    if (status === 400) {
+                        console.log("Cannot connect to server");
+                        alert("Cannot connect to server");
+                        $scope.status = 'Unknown';
+                        $scope.uptime = 'Not available';
+                        $scope.peripherals = [];
+                    }
+                    if (status === 500) {
+                        console.log("Server error");
+                        alert("Server error");
+                        $scope.status = 'Unknown';
+                        $scope.uptime = 'Not available';
+                        $scope.peripherals = [];
+                    }
+                    else {
+                        console.log(data);
+                        $scope.status = data.status;
+                        $scope.peripherals = data.peripherals;
+
+                        var delta = data.uptime /1000 ;
+                        var days = Math.floor(delta / 86400);
+                        delta -= days * 86400;
+
+                        var hours = Math.floor(delta / 3600) % 24;
+                        delta -= hours * 3600;
+
+                        var minutes = Math.floor(delta / 60) % 60;
+                        delta -= minutes * 60;
+
+                        var seconds = Math.floor(delta % 60);
+                        if(days === 1)
+                        {
+                            $scope.uptime = '1 day ,';
+                        }
+                        else
+                        {
+                            $scope.uptime = days.toString() + ' days ,';
+                        }
+                        $scope.uptime += hours.toString() + ':' + minutes.toString() + ':' + seconds.toString();
+                    }
+                }).error(function(){
+                    $scope.status = 'Unknown';
+                    $scope.uptime = 'Not available';
+                    $scope.peripherals = [];
+                });
+            }
+
+            $scope.stopGateway = function(callback) {
+                $http.get('/api/gateway/stop', {timeout: 2000}).success(function (data, status, headers, config) {
+                    if (status === 400) {
+                        console.log("Cannot connect to server");
+                        alert("Cannot connect to server");
+                    }
+                    if (status === 500) {
+                        console.log("Server error");
+                        alert("Server error");
+                    }
+                    else {
+                        alert(data);
+                        if(callback)
+                        {
+                            callback();
+                        }
+                    }
+                });
+            }
+
+            $scope.startGateway = function() {
+                $http.get('/api/gateway/start', {timeout: 2000}).success(function (data, status, headers, config) {
+                    if (status === 400) {
+                        console.log("Cannot connect to server");
+                        alert("Cannot connect to server");
+                    }
+                    if (status === 500) {
+                        console.log("Server error");
+                        alert("Server error");
+                    }
+                    else {
+                        alert(data);
+                    }
+                });
+            }
+
+            $scope.newPage = function (){
+                $scope.stopGateway(function(){
+                    $window.location.href = '/index.html';
+                });
+            };
+        });
+
+    </script>
+</head>
+<body ng-app="test">
+
+<div class="container" ng-controller="StartScanCtrl" style="margin-top: 100px">
+
+    <h3>Gateway Home</h3>
+
+    <div class="tab-content">
+        <div id="sensorconfig" class="tab-pane fade in active">
+
+            <div class="row" style="margin-bottom: 85px;">
+                <div class="col-sm-4">
+
+
+                    <div class="form-group">
+
+                        <button id="btnConfig" type="button" class="btn btn-default"
+                                style="width:80%; background-color: greenyellow; margin-top: 40px;" ng-click="newPage()"
+                                ng-disabled="disableScanningButton">Go to configuration page
+                        </button>
+                        <button id="btnStart" type="button" class="btn btn-default"
+                                style="width:80%; background-color: greenyellow; margin-top: 30px;" ng-click="startGateway()"
+                                ng-disabled="disableScanningButton">Start Gateway
+                        </button>
+                        <button id="btnStop" type="button" class="btn btn-default"
+                                style="width:80%; background-color: greenyellow; margin-top: 30px;" ng-click="stopGateway()"
+                                ng-disabled="disableScanningButton">Stop Gateway
+                        </button>
+                        <button id="btnReboot" type="button" class="btn btn-default"
+                                style="width:80%; background-color: greenyellow; margin-top: 30px;" ng-click="enableScan()"
+                                ng-disabled="disableScanningButton">Restart Gateway
+                        </button>
+
+                    </div>
+                </div>
+
+                <div class="col-sm-8">
+                    <h5>Status</h5>
+                    <input class="form-control input-lg" id="status" type="text" value={{status}}
+                           readonly>
+
+                    <h5 style="margin-top: 30px;">Uptime</h5>
+                    <input class="form-control input-lg" id="uptime" type="text" value={{uptime}}
+                           readonly>
+
+                    <h5 style="margin-top: 30px;">Connected Peripherals</h5>
+                    <div class="well sidebar-nav" ng-show="!serviceLoading"
+                         style="overflow: scroll;">
+                        <ul style="">
+                            <li ng-repeat=" peripheral in peripherals">
+                                {{peripheral.advertisement.localName || "Unknown Name"}}
+                                <ul>
+                                    <li>UUID: {{ peripheral.uuid }}</li>
+                                    <li>RSSI: {{ peripheral.rssi }}</li>
+                                </ul>
+                            </li>
+                        </ul>
+                    </div>
+                    <!--/.well -->
+                    <!--/span-->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+<footer class="footer">
+    <div class="container">
+        <p class="text-muted" style="margin-top: 23px">Website Config Version 0.23</p>
+    </div>
+</footer>
+
+</body>
+</html>
